@@ -1,30 +1,32 @@
+import os
 import discord
 from discord import app_commands
 from datetime import datetime
 import random
-import os
 
 # ========= CONFIG =========
-TOKEN = os.getenv("TOKEN")  # Railway ENV
+TOKEN = os.getenv("TOKEN")  # <-- METTI IL TOKEN SU RAILWAY (ENV VAR)
+
 GUILD_ID = 1462959158763585693
 ROLE_ID_AUTORIZZATO = 1465798254263406858
 LOG_CHANNEL_ID = 1465798160323444897
 # ==========================
 
-# ===== INTENTS =====
+# ===== INTENTS (IMPORTANTISSIMO) =====
 intents = discord.Intents.default()
-intents.guilds = True
 intents.members = True
+intents.message_content = True
 
 client = discord.Client(intents=intents)
 tree = app_commands.CommandTree(client)
 guild = discord.Object(id=GUILD_ID)
 
-# ===== LOG FILE (temporaneo su Railway) =====
-def salva_log(testo):
+# ===== LOG FILE =====
+def salva_log(testo: str):
     with open("log_pulizie.txt", "a", encoding="utf-8") as f:
         f.write(testo + "\n")
 
+# ===== READY =====
 @client.event
 async def on_ready():
     await tree.sync(guild=guild)
@@ -37,9 +39,9 @@ async def on_ready():
     guild=guild
 )
 @app_commands.describe(
-    bottiglie="Numero bottiglie",
+    bottiglie="Numero di bottiglie",
     prezzo="Prezzo per bottiglia",
-    famiglia="Nome famiglia"
+    famiglia="Nome della famiglia"
 )
 async def pulizia(
     interaction: discord.Interaction,
@@ -84,20 +86,22 @@ async def pulizia(
 
     salva_log(log_testo)
 
-    log_channel = client.get_channel(LOG_CHANNEL_ID)
-    if log_channel:
+    try:
+        log_channel = await client.fetch_channel(LOG_CHANNEL_ID)
         await log_channel.send(
             f"🧾 **LOG PULIZIA**\n```{log_testo}```"
         )
+    except Exception as e:
+        print("❌ Errore canale log:", e)
 
 # ===== /annulla =====
 @tree.command(
     name="annulla",
-    description="Annulla una pulizia tramite ID",
+    description="Annulla una pulizia tramite ID fattura",
     guild=guild
 )
 @app_commands.describe(
-    id_fattura="ID fattura da annullare"
+    id_fattura="ID della fattura da annullare"
 )
 async def annulla(interaction: discord.Interaction, id_fattura: str):
     await interaction.response.defer(ephemeral=True)
@@ -115,15 +119,18 @@ async def annulla(interaction: discord.Interaction, id_fattura: str):
 
     salva_log(testo)
 
-    log_channel = client.get_channel(LOG_CHANNEL_ID)
-    if log_channel:
+    try:
+        log_channel = await client.fetch_channel(LOG_CHANNEL_ID)
         await log_channel.send(
             f"🚫 **PULIZIA ANNULLATA**\n```{testo}```"
         )
+    except Exception as e:
+        print("❌ Errore canale log:", e)
 
     await interaction.followup.send(
         f"🚫 Pulizia **{id_fattura}** annullata.",
         ephemeral=True
     )
 
+# ===== AVVIO =====
 client.run(TOKEN)
