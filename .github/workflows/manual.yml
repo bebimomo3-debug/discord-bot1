@@ -1,0 +1,28 @@
+name: Discord Bot Scheduled
+
+on:
+  schedule:
+    - cron: '20 13 * * *'   # parte alle 13:20
+    - cron: '0 2 * * *'     # stop alle 02:00
+  workflow_dispatch:
+
+jobs:
+  bot:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install -U discord.py
+
+      - name: Run bot
+        env:
+          DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}
+        run: python bot.py
