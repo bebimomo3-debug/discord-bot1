@@ -5,7 +5,7 @@ from datetime import datetime
 import random
 
 # ========= CONFIG =========
-TOKEN = os.getenv("DISCORD_TOKEN")
+TOKEN = os.getenv("TOKEN")
 GUILD_ID = 1462959158763585693
 ROLE_ID_AUTORIZZATO = 1465798254263406858
 LOG_CHANNEL_ID = 1465798160323444897
