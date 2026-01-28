@@ -5,7 +5,7 @@ from datetime import datetime
 import random
 
 # ========= CONFIG =========
-TOKEN = os.getenv("TOKEN")
+TOKEN = os.getenv("DISCORD_TOKEN")
 GUILD_ID = 1462959158763585693
 ROLE_ID_AUTORIZZATO = 1465798254263406858
 LOG_CHANNEL_ID = 1465798160323444897
@@ -29,39 +29,28 @@ async def on_ready():
 # ======================
 #        /PULIZIA
 # ======================
-@tree.command(
-    name="pulizia",
-    description="Registra una pulizia",
-    guild=guild
-)
+@tree.command(name="pulizia", description="Registra una pulizia alcol", guild=guild)
 @app_commands.describe(
     famiglia="Nome famiglia",
     bottiglie="Numero bottiglie",
     prezzo="Prezzo per bottiglia"
 )
-async def pulizia(
-    interaction: discord.Interaction,
-    famiglia: str,
-    bottiglie: int,
-    prezzo: int
-):
+async def pulizia(interaction: discord.Interaction, famiglia: str, bottiglie: int, prezzo: int):
     await interaction.response.defer()
 
     ruolo = interaction.guild.get_role(ROLE_ID_AUTORIZZATO)
     if ruolo not in interaction.user.roles:
-        await interaction.followup.send(
-            "❌ Non hai il ruolo necessario.",
-            ephemeral=True
-        )
+        await interaction.followup.send("❌ Non autorizzato.", ephemeral=True)
         return
 
     totale = bottiglie * prezzo
     data_ora = datetime.now().strftime("%d/%m/%Y • %H:%M")
-    fattura_id = f"PZ-{random.randint(10000, 99999)}"
-    utente = interaction.user.mention  # 👈 TAG AUTOMATICO
+    fattura_id = f"PZ-{random.randint(10000,99999)}"
+    utente = interaction.user.mention
 
+    # ===== EMBED UTENTE =====
     embed = discord.Embed(
-        title="🧾 LOG PULIZIA",
+        title="🍾 PULIZIA ALCOL",
         color=discord.Color.green()
     )
 
@@ -75,41 +64,33 @@ async def pulizia(
 
     await interaction.followup.send(embed=embed)
 
-    log_testo = (
-        f"[{data_ora}]\n"
-        f"Utente: {utente}\n"
-        f"Famiglia: {famiglia}\n"
-        f"Bottiglie: {bottiglie}\n"
-        f"Prezzo: {prezzo}$\n"
-        f"Totale: {totale}$\n"
-        f"ID: {fattura_id}"
+    # ===== LOG EMBED =====
+    log_embed = discord.Embed(
+        title=f"🧾 PULIZIA ID: {fattura_id}",
+        color=discord.Color.blue()
     )
 
-    salva_log(log_testo)
+    log_embed.add_field(name="👤 Utente", value=utente, inline=False)
+    log_embed.add_field(name="👨‍👩‍👧 Famiglia", value=famiglia, inline=False)
+    log_embed.add_field(name="🍾 Bottiglie", value=bottiglie, inline=True)
+    log_embed.add_field(name="💵 Prezzo", value=f"{prezzo}$", inline=True)
+    log_embed.add_field(name="💰 Totale", value=f"{totale}$", inline=True)
+    log_embed.set_footer(text=data_ora)
 
-    try:
-        log_channel = await client.fetch_channel(LOG_CHANNEL_ID)
-        await log_channel.send(embed=embed)
-    except Exception as e:
-        print("Errore log:", e)
+    log_channel = await client.fetch_channel(LOG_CHANNEL_ID)
+    await log_channel.send(embed=log_embed)
+
+    salva_log(f"[{data_ora}] PULIZIA {fattura_id} | {utente} | {famiglia} | {totale}$")
 
 # ======================
 #        /ANNULLA
 # ======================
-@tree.command(
-    name="annulla",
-    description="Annulla una pulizia",
-    guild=guild
-)
+@tree.command(name="annulla", description="Annulla una pulizia", guild=guild)
 @app_commands.describe(
-    id_fattura="ID fattura",
-    motivo="Motivo annullamento"
+    id_fattura="ID della pulizia (es. PZ-12345)",
+    motivo="Motivo dell'annullamento"
 )
-async def annulla(
-    interaction: discord.Interaction,
-    id_fattura: str,
-    motivo: str
-):
+async def annulla(interaction: discord.Interaction, id_fattura: str, motivo: str):
     await interaction.response.defer(ephemeral=True)
 
     ruolo = interaction.guild.get_role(ROLE_ID_AUTORIZZATO)
@@ -120,29 +101,27 @@ async def annulla(
     data_ora = datetime.now().strftime("%d/%m/%Y • %H:%M")
     utente = interaction.user.mention
 
-    testo = (
-        f"[{data_ora}]\n"
-        f"Utente: {utente}\n"
-        f"ID: {id_fattura}\n"
-        f"Motivo: {motivo}"
-    )
-
-    salva_log(testo)
-
+    # ===== LOG EMBED ANNULLA =====
     embed = discord.Embed(
-        title="🚫 PULIZIA ANNULLATA",
+        title=f"🚫 PULIZIA ANNULLATA | {id_fattura}",
         color=discord.Color.red()
     )
+
     embed.add_field(name="👤 Utente", value=utente, inline=False)
-    embed.add_field(name="🆔 ID", value=id_fattura, inline=False)
     embed.add_field(name="📝 Motivo", value=motivo, inline=False)
     embed.set_footer(text=data_ora)
 
     log_channel = await client.fetch_channel(LOG_CHANNEL_ID)
     await log_channel.send(embed=embed)
 
-    await interaction.followup.send("🚫 Pulizia annullata.", ephemeral=True)
+    salva_log(f"[{data_ora}] ANNULLATA {id_fattura} | {utente} | Motivo: {motivo}")
 
-# ===== AVVIO =====
+    await interaction.followup.send(
+        f"🚫 Pulizia **{id_fattura}** annullata.\n📝 Motivo: {motivo}",
+        ephemeral=True
+    )
+
+# ======================
+#        AVVIO
+# ======================
 client.run(TOKEN)
-
